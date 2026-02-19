@@ -1,5 +1,5 @@
 using Test
-using NURBS
+using NURBSBOOK
 
 @testset "B-spline Surfaces (Ch 3)" begin
 

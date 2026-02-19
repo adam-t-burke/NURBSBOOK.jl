@@ -1,4 +1,4 @@
-# NURBS.jl
+# NURBSBOOK.jl
 
 A comprehensive Julia implementation of Non-Uniform Rational B-Splines (NURBS) based on
 *The NURBS Book* by Les Piegl and Wayne Tiller (Springer, 2nd Edition, 1997).
@@ -15,13 +15,13 @@ A comprehensive Julia implementation of Non-Uniform Rational B-Splines (NURBS) b
 
 ```julia
 using Pkg
-Pkg.add("NURBS")
+Pkg.add("NURBSBOOK")
 ```
 
 ## Quick Start
 
 ```julia
-using NURBS
+using NURBSBOOK
 
 # Define a cubic B-spline curve
 knots = KnotVector([0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 5.0, 5.0, 5.0])

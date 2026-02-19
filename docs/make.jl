@@ -1,9 +1,9 @@
 using Documenter
-using NURBS
+using NURBSBOOK
 
 makedocs(
-    sitename = "NURBS.jl",
-    modules = [NURBS],
+    sitename = "NURBSBOOK.jl",
+    modules = [NURBSBOOK],
     format = Documenter.HTML(prettyurls = false),
     pages = [
         "Home" => "index.md",

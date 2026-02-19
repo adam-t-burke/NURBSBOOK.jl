@@ -1,5 +1,5 @@
 using Test
-using NURBS
+using NURBSBOOK
 using LinearAlgebra
 
 @testset "NURBS Curves & Surfaces (Ch 4)" begin

@@ -1,5 +1,5 @@
 using Test
-using NURBS
+using NURBSBOOK
 using LinearAlgebra
 
 @testset "Advanced Algorithms (Ch 6)" begin

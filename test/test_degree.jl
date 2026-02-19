@@ -1,5 +1,5 @@
 using Test
-using NURBS
+using NURBSBOOK
 using LinearAlgebra
 
 @testset "Degree Elevation & Reduction (Ch 5)" begin

@@ -1,5 +1,5 @@
 using Test
-using NURBS
+using NURBSBOOK
 using LinearAlgebra
 
 @testset "Knot Operations (Ch 5)" begin

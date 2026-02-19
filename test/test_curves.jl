@@ -1,5 +1,5 @@
 using Test
-using NURBS
+using NURBSBOOK
 using LinearAlgebra
 
 @testset "B-spline Curves (Ch 3)" begin

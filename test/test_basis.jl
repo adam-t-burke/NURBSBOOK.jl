@@ -1,5 +1,5 @@
 using Test
-using NURBS
+using NURBSBOOK
 
 @testset "Basis Functions (Ch 2)" begin
 

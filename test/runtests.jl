@@ -1,7 +1,7 @@
 using Test
-using NURBS
+using NURBSBOOK
 
-@testset "NURBS.jl" begin
+@testset "NURBSBOOK.jl" begin
     include("test_basis.jl")
     include("test_curves.jl")
     include("test_surfaces.jl")

@@ -1,5 +1,5 @@
 """
-    NURBS
+    NURBSBOOK
 
 A comprehensive Julia implementation of Non-Uniform Rational B-Splines based on
 *The NURBS Book* by Les Piegl and Wayne Tiller (Springer, 2nd Edition, 1997).
@@ -9,7 +9,7 @@ Julia, with full docstrings referencing algorithm numbers, equations, and page n
 
 Only standard-library dependencies are used (`LinearAlgebra`).
 """
-module NURBS
+module NURBSBOOK
 
 using LinearAlgebra
 
