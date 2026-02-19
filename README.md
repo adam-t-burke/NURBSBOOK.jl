@@ -1,5 +1,9 @@
 # NURBSBOOK.jl
 
+[![Build Status](https://github.com/adam-t-burke/NURBSBOOK.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/adam-t-burke/NURBSBOOK.jl/actions/workflows/CI.yml)
+[![Dev Docs](https://img.shields.io/badge/docs-dev-blue.svg)](https://adam-t-burke.github.io/NURBSBOOK.jl/dev/)
+[![Stable Docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://adam-t-burke.github.io/NURBSBOOK.jl/stable/)
+
 A comprehensive Julia implementation of Non-Uniform Rational B-Splines (NURBS) based on
 *The NURBS Book* by Les Piegl and Wayne Tiller (Springer, 2nd Edition, 1997).
 

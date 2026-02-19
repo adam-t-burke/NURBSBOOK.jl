@@ -15,3 +15,8 @@ makedocs(
         "API Reference" => "api.md",
     ],
 )
+
+deploydocs(
+    repo = "github.com/adam-t-burke/NURBSBOOK.jl.git",
+    devbranch = "main",
+)
