@@ -27,9 +27,25 @@ end
 """
     insert_knot(crv::BSplineCurve{T}, u::Real, r::Int=1) -> BSplineCurve{T}
 
-Insert knot `u` into the curve `r` times.  The curve shape is unchanged.
+Insert knot ``\\bar{u}`` into the curve ``r`` times. The curve shape is
+unchanged.
 
-Implements Algorithm A5.1 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 151.
+Given a knot span ``u_k \\le \\bar{u} < u_{k+1}`` with existing multiplicity
+``s``, the new control points are computed via (Eq. 5.15):
+
+```math
+Q_i^r = \\alpha_i^r\\, Q_i^{r-1} + (1 - \\alpha_i^r)\\, Q_{i-1}^{r-1}
+```
+
+where ``Q_i^0 = P_i`` and
+
+```math
+\\alpha_i = \\frac{\\bar{u} - u_i}{u_{i+p} - u_i}
+```
+
+for ``k - p + 1 \\le i \\le k - s``. Points outside this range are unchanged.
+
+Implements **Algorithm A5.1** from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 151.
 
 # Arguments
 - `crv::BSplineCurve{T}`: input curve
@@ -102,7 +118,11 @@ end
 """
     insert_knot(crv::NURBSCurve{T}, u::Real, r::Int=1) -> NURBSCurve{T}
 
-Insert knot `u` into a NURBS curve `r` times, via homogeneous coordinates.
+Insert knot ``\\bar{u}`` into a NURBS curve ``r`` times.
+
+Knot insertion for NURBS is performed by converting to homogeneous
+coordinates ``P_i^w = (w_i P_i,\\, w_i)``, applying the B-spline knot
+insertion algorithm (Eq. 5.15), and projecting back.
 
 See also: [`insert_knot(::BSplineCurve, ::Real, ::Int)`](@ref)
 """
@@ -119,15 +139,18 @@ end
 """
     refine_knots(crv::BSplineCurve{T}, X::AbstractVector{<:Real}) -> BSplineCurve{T}
 
-Refine the knot vector by inserting all knots in `X` simultaneously.
+Refine the knot vector by inserting all knots in ``X`` simultaneously.
 
-Implements Algorithm A5.4 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 164.
+Given a sorted vector ``X = \\{\\bar{u}_0, \\ldots, \\bar{u}_r\\}`` of new knot
+values, this algorithm inserts them all into the knot vector in a single pass.
+The resulting curve ``\\bar{C}(u)`` satisfies ``\\bar{C}(u) \\equiv C(u)`` — 
+the shape is preserved exactly (Theorem 5.36).
 
-`X` must be sorted non-decreasing.
+Implements **Algorithm A5.4** from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 164.
 
 # Arguments
 - `crv::BSplineCurve{T}`: input curve
-- `X::AbstractVector`: knots to insert (sorted)
+- `X::AbstractVector`: knots to insert (sorted non-decreasing)
 
 # Returns
 - `BSplineCurve{T}`: refined curve
@@ -146,7 +169,11 @@ end
 """
     refine_knots(crv::NURBSCurve{T}, X::AbstractVector{<:Real}) -> NURBSCurve{T}
 
-Refine the knot vector of a NURBS curve, via homogeneous coordinates.
+Refine the knot vector of a NURBS curve by inserting all knots in ``X``.
+
+Works via homogeneous coordinates: the NURBS curve is lifted to
+``P_i^w = (w_i P_i,\\, w_i)``, the B-spline refinement is applied, and
+the result is projected back.
 
 See also: [`refine_knots(::BSplineCurve, ::AbstractVector)`](@ref)
 """
@@ -164,9 +191,17 @@ end
     remove_knot(crv::BSplineCurve{T}, u::Real, num::Int,
                 tol::Real) -> Tuple{BSplineCurve{T}, Int}
 
-Attempt to remove the knot `u` up to `num` times within tolerance `tol`.
+Attempt to remove the knot ``\\bar{u}`` up to `num` times within tolerance
+`tol`.
 
-Implements Algorithm A5.8 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 185.
+Knot removal is the reverse of knot insertion. If knot ``\\bar{u}`` has
+multiplicity ``s``, removing it once reduces the multiplicity to ``s - 1``.
+The new control points are computed by solving the insertion equations in
+reverse. The removal is accepted only if the resulting curve deviates from
+the original by less than `tol` (measured as a Euclidean norm bound on the
+control polygon displacement).
+
+Implements **Algorithm A5.8** from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 185.
 
 # Arguments
 - `crv::BSplineCurve{T}`: input curve
@@ -175,7 +210,7 @@ Implements Algorithm A5.8 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 185
 - `tol::Real`: geometric tolerance
 
 # Returns
-- `(new_curve, t)`: resulting curve and actual number of removals
+- `(new_curve, t)`: resulting curve and actual number of successful removals
 
 See also: [`insert_knot`](@ref)
 """
@@ -279,7 +314,12 @@ end
 
 Insert a knot into a B-spline surface in direction `dir` (`:u` or `:v`).
 
-Applies Algorithm A5.1 to each isoparametric curve.
+For a surface ``S(u,v) = \\sum_i \\sum_j N_{i,p}(u)\\, N_{j,q}(v)\\, P_{i,j}``,
+inserting a knot in the ``u``-direction applies the curve knot insertion
+formula (Eq. 5.15) to each row of isoparametric curves (fixed ``v``-index),
+and analogously for the ``v``-direction.
+
+Applies **Algorithm A5.1** to each isoparametric curve.
 
 # Arguments
 - `surf::BSplineSurface{T}`: input surface
@@ -288,7 +328,7 @@ Applies Algorithm A5.1 to each isoparametric curve.
 - `r::Int`: number of insertions
 
 # Returns
-- `BSplineSurface{T}`: new surface
+- `BSplineSurface{T}`: new surface with inserted knot(s)
 
 See also: [`insert_knot(::BSplineCurve, ::Real, ::Int)`](@ref)
 """

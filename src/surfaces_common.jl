@@ -8,9 +8,17 @@
 
 Construct a bilinear surface from four corner points.
 
-Piegl & Tiller, *The NURBS Book*, 2nd ed., Algorithm A8.1, p. 334.
+The bilinear surface is the simplest tensor-product surface (Eq. 8.1):
 
-``S(u,v) = (1-u)(1-v)P_{00} + u(1-v)P_{10} + (1-u)v P_{01} + uv P_{11}``
+```math
+S(u,v) = (1-u)(1-v)\\, P_{00} + u(1-v)\\, P_{10}
+       + (1-u)v\\, P_{01} + uv\\, P_{11}
+```
+
+This is a degree ``(1, 1)`` B-spline surface with knot vectors
+``\\{0, 0, 1, 1\\}`` in both directions.
+
+Piegl & Tiller, *The NURBS Book*, 2nd ed., Algorithm A8.1, p. 334.
 """
 function make_bilinear_surface(P00::Vector{T}, P10::Vector{T},
                                P01::Vector{T}, P11::Vector{T}) where {T}
@@ -28,10 +36,16 @@ end
 
 Construct a ruled surface linearly interpolating between two B-spline curves.
 
-Piegl & Tiller, *The NURBS Book*, 2nd ed., Algorithm A8.3, p. 337.
+A ruled surface through ``C_1(u)`` and ``C_2(u)`` is (Eq. 8.7):
 
-The curves must have the same degree and knot vector (after compatibility
-processing, which this function performs automatically).
+```math
+S(u,v) = (1 - v)\\, C_1(u) + v\\, C_2(u)
+```
+
+The two curves are made compatible (same degree and knot vector) via degree
+elevation and knot refinement before the control net is constructed.
+
+Piegl & Tiller, *The NURBS Book*, 2nd ed., Algorithm A8.3, p. 337.
 """
 function make_ruled_surface(crv1::BSplineCurve{T}, crv2::BSplineCurve{T}) where {T}
     c1, c2 = crv1, crv2
@@ -77,6 +91,16 @@ end
 
 Construct a cylinder by extruding a B-spline curve along a direction.
 
+The extruded (translational) surface is (Eq. 8.3):
+
+```math
+S(u,v) = C(u) + v\\, L\\, \\hat{T}
+```
+
+where ``\\hat{T}`` is the extrusion direction and ``L`` is the length. This
+is implemented as a ruled surface between ``C(u)`` and
+``C(u) + L\\hat{T}``.
+
 Piegl & Tiller, *The NURBS Book*, 2nd ed., Algorithm A8.2, p. 336.
 """
 function make_cylinder(crv::BSplineCurve{T}, dir::Vector{T}, len::T) where {T}
@@ -92,13 +116,26 @@ end
 
 Construct a surface of revolution by rotating a NURBS profile about an axis.
 
+Each control point ``P_i`` of the generatrix is projected onto the axis,
+yielding center ``O_i`` and radius ``r_i = \\lVert P_i - O_i \\rVert``.
+A circular arc of angle ``\\theta`` is constructed for each point, and the
+surface is assembled as:
+
+```math
+S(u, \\theta) = \\sum_{i=0}^{n} \\sum_{j=0}^{m}
+  N_{i,p}(u)\\, N_{j,2}(\\theta)\\, w_{i,j}\\, P_{i,j}
+```
+
+where the ``v``-direction is degree 2 with weights derived from
+``w_j = \\cos(\\Delta\\theta / 2)`` for interior arc control points.
+
 Piegl & Tiller, *The NURBS Book*, 2nd ed., Algorithm A8.1, p. 340.
 
 # Arguments
-- `crv`: generatrix curve
-- `S`: point on axis
-- `axis`: unit direction of axis
-- `theta`: revolution angle (radians, up to 2π)
+- `crv`: generatrix (profile) NURBS curve
+- `S`: a point on the axis of revolution
+- `axis`: unit direction vector of the axis
+- `theta`: revolution angle in radians (up to ``2\\pi``)
 """
 function make_revolved_surface(crv::NURBSCurve{T}, S::Vector{T}, axis::Vector{T},
                                theta::T) where {T}

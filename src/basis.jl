@@ -12,16 +12,24 @@
 
 Return the knot span index ``i`` such that ``U[i] \\le u < U[i+1]``.
 
-For the special case ``u = U[n+1]`` (the right end of the parameter domain)
-the function returns ``n`` so that the last non-degenerate span is used.
+Given a knot vector ``U = \\{u_0, \\ldots, u_m\\}`` with ``m = n + p``, this
+function performs a binary search to locate the knot span containing ``u``:
 
-Implements Algorithm A2.1 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 68.
+```math
+i \\;\\text{ such that }\\; u_i \\le u < u_{i+1}
+```
+
+For the special case ``u = u_{n+1}`` (the right end of the parameter domain
+``[u_p,\\, u_{n+1}]``) the function returns ``n`` so that the last
+non-degenerate span is used.
+
+Implements **Algorithm A2.1** from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 68.
 
 # Arguments
-- `n::Int`: number of control points
+- `n::Int`: number of control points (``n + 1`` total, indexed ``0 \\ldots n``)
 - `p::Int`: degree
-- `u::Real`: parameter value
-- `U::KnotVector`: knot vector of length `n + p + 1`
+- `u::Real`: parameter value in ``[u_p,\\, u_{n+1}]``
+- `U::KnotVector`: knot vector of length ``m + 1 = n + p + 2``
 
 # Returns
 - `Int`: knot span index (1-based)
@@ -55,13 +63,28 @@ end
 """
     basis_functions(span::Int, u::Real, p::Int, U::KnotVector{T}) -> Vector{T}
 
-Compute the ``p + 1`` nonvanishing B-spline basis functions at parameter `u`.
+Compute the ``p + 1`` nonvanishing B-spline basis functions at parameter ``u``.
 
-Returns a vector `N` of length ``p+1`` where `N[j]` is the value of the
-basis function whose support includes the knot span `span`, ordered from
-left to right: the function associated with control point `span - p + j - 1`.
+The B-spline basis functions are defined by the Cox–de Boor recursion
+(Eq. 2.5):
 
-Implements Algorithm A2.2 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 70.
+```math
+N_{i,0}(u) = \\begin{cases}
+  1 & \\text{if } u_i \\le u < u_{i+1} \\\\
+  0 & \\text{otherwise}
+\\end{cases}
+```
+```math
+N_{i,p}(u) = \\frac{u - u_i}{u_{i+p} - u_i}\\, N_{i,p-1}(u)
+            + \\frac{u_{i+p+1} - u}{u_{i+p+1} - u_{i+1}}\\, N_{i+1,p-1}(u)
+```
+
+At any given ``u``, at most ``p + 1`` basis functions are nonzero.
+This function returns those values as a vector `N` of length ``p + 1``,
+where `N[j]` corresponds to ``N_{\\text{span}-p+j-2,\\,p}(u)`` (0-based book
+indexing).
+
+Implements **Algorithm A2.2** from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 70.
 
 # Arguments
 - `span::Int`: knot span index (1-based), from [`find_span`](@ref)
@@ -70,7 +93,7 @@ Implements Algorithm A2.2 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 70.
 - `U::KnotVector{T}`: knot vector
 
 # Returns
-- `Vector{T}` of length `p + 1`
+- `Vector{T}` of length ``p + 1``
 
 See also: [`find_span`](@ref), [`basis_function_derivatives`](@ref)
 """
@@ -99,18 +122,31 @@ end
 
 Compute the nonzero basis functions and their derivatives up to order `nders`.
 
-Implements Algorithm A2.3 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 72.
+The ``k``-th derivative of a ``p``-degree B-spline basis function is given
+by the recurrence (Eq. 2.9):
+
+```math
+N_{i,p}^{(k)}(u) = p\\!\\left(
+  \\frac{N_{i,p-1}^{(k-1)}(u)}{u_{i+p} - u_i}
+  - \\frac{N_{i+1,p-1}^{(k-1)}(u)}{u_{i+p+1} - u_{i+1}}
+\\right)
+```
+
+with ``N_{i,p}^{(0)} \\equiv N_{i,p}`` and ``N_{i,p}^{(k)} = 0`` for
+``k > p``.
+
+Implements **Algorithm A2.3** from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 72.
 
 # Arguments
 - `span::Int`: knot span index (1-based)
 - `u::Real`: parameter value
 - `p::Int`: degree
-- `nders::Int`: maximum derivative order (clamped to `p`)
+- `nders::Int`: maximum derivative order (clamped to ``p``)
 - `U::KnotVector{T}`: knot vector
 
 # Returns
-- `Matrix{T}` of size `(nders+1) × (p+1)` where `ders[k, j]` is the
-  `(k-1)`-th derivative of the `j`-th nonzero basis function.
+- `Matrix{T}` of size ``(\\text{nders}+1) \\times (p+1)`` where `ders[k, j]`
+  is the ``(k-1)``-th derivative of the ``j``-th nonzero basis function.
   Row 1 = function values, row 2 = first derivatives, etc.
 
 See also: [`find_span`](@ref), [`basis_functions`](@ref)
@@ -188,14 +224,25 @@ end
 """
     one_basis_function(p::Int, U::KnotVector{T}, i::Int, u::Real) -> T
 
-Compute a single basis function ``N_{i,p}(u)`` where `i` is the 1-based
-index of the basis function (i.e., associated with control point `i`).
+Compute a single basis function ``N_{i,p}(u)`` where ``i`` is the 1-based
+index (i.e., associated with control point ``i``).
 
-Implements Algorithm A2.4 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 74.
+Evaluates the Cox–de Boor recursion (Eq. 2.5) directly for one function:
+
+```math
+N_{i,p}(u) = \\frac{u - u_i}{u_{i+p} - u_i}\\, N_{i,p-1}(u)
+            + \\frac{u_{i+p+1} - u}{u_{i+p+1} - u_{i+1}}\\, N_{i+1,p-1}(u)
+```
+
+``N_{i,p}(u)`` is nonzero only on ``[u_i,\\, u_{i+p+1})``. This function
+is useful when only a single value is needed, avoiding computation of all
+``p+1`` nonzero functions.
+
+Implements **Algorithm A2.4** from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 74.
 
 # Arguments
 - `p::Int`: degree
-- `U::KnotVector{T}`: knot vector of length `m`
+- `U::KnotVector{T}`: knot vector of length ``m + 1``
 - `i::Int`: 1-based basis function index
 - `u::Real`: parameter value
 
@@ -251,9 +298,19 @@ end
     one_basis_function_derivatives(p::Int, U::KnotVector{T}, i::Int,
                                    u::Real, nders::Int) -> Vector{T}
 
-Compute derivatives of a single basis function ``N_{i,p}(u)`` up to order `nders`.
+Compute derivatives of a single basis function ``N_{i,p}(u)`` up to order
+`nders`.
 
-Implements Algorithm A2.5 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 76.
+Uses the closed-form derivative expression (Eq. 2.10):
+
+```math
+N_{i,p}^{(k)}(u) = \\frac{p!}{(p-k)!} \\sum_{j=0}^{k} a_{k,j}\\, N_{i+j,\\,p-k}(u)
+```
+
+where the coefficients ``a_{k,j}`` satisfy a recurrence built from knot
+differences (see *The NURBS Book*, Eq. 2.11–2.12).
+
+Implements **Algorithm A2.5** from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 76.
 
 # Arguments
 - `p::Int`: degree
@@ -263,7 +320,8 @@ Implements Algorithm A2.5 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 76.
 - `nders::Int`: maximum derivative order
 
 # Returns
-- `Vector{T}` of length `nders + 1` where entry `k` is the `(k-1)`-th derivative.
+- `Vector{T}` of length ``\\text{nders} + 1`` where entry ``k`` is the
+  ``(k-1)``-th derivative ``N_{i,p}^{(k-1)}(u)``.
 
 See also: [`one_basis_function`](@ref), [`basis_function_derivatives`](@ref)
 """

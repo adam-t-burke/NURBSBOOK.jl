@@ -6,7 +6,24 @@
     point_inversion_curve(crv::AbstractSplineCurve{T}, P::AbstractVector{<:Real};
                           u0::Real=NaN, tol::Real=1e-8, maxiter::Int=50) -> T
 
-Newton iteration to find parameter `u` such that `C(u) ≈ P`.
+Newton iteration to find parameter ``u`` such that ``C(u) \\approx P``.
+
+Given a target point ``P``, this solves the minimization problem
+
+```math
+\\min_u \\lVert C(u) - P \\rVert^2
+```
+
+via Newton's method. Setting ``f(u) = C'(u) \\cdot (C(u) - P)``, the update
+is (Eq. 6.3–6.4):
+
+```math
+u_{i+1} = u_i - \\frac{C'(u_i) \\cdot (C(u_i) - P)}
+  {C''(u_i) \\cdot (C(u_i) - P) + \\lVert C'(u_i) \\rVert^2}
+```
+
+Convergence is checked on both ``\\lVert C(u) - P \\rVert`` and
+``|\\Delta u|``.
 
 Piegl & Tiller, *The NURBS Book*, 2nd ed., Section 6.1, p. 230.
 
@@ -18,7 +35,7 @@ Piegl & Tiller, *The NURBS Book*, 2nd ed., Section 6.1, p. 230.
 - `maxiter`: max iterations
 
 # Returns
-- Parameter value `u`
+- Parameter value ``u``
 """
 function point_inversion_curve(crv::AbstractSplineCurve{T}, P::AbstractVector{<:Real};
                                u0::Real=NaN, tol::Real=1e-8, maxiter::Int=50) where {T}
@@ -48,9 +65,36 @@ end
                             u0::Real=NaN, v0::Real=NaN,
                             tol::Real=1e-8, maxiter::Int=50) -> Tuple{T, T}
 
-Newton iteration to find `(u, v)` such that `S(u,v) ≈ P`.
+Newton iteration to find ``(u, v)`` such that ``S(u,v) \\approx P``.
+
+Solves ``\\min_{u,v} \\lVert S(u,v) - P \\rVert^2`` via the 2D Newton update:
+
+```math
+\\begin{pmatrix} \\Delta u \\\\ \\Delta v \\end{pmatrix}
+= -J^{-1}
+\\begin{pmatrix} S_u \\cdot (S - P) \\\\ S_v \\cdot (S - P) \\end{pmatrix}
+```
+
+where ``J`` is the ``2 \\times 2`` Hessian of the squared-distance objective:
+
+```math
+J = \\begin{pmatrix}
+  S_u \\cdot S_u + (S - P) \\cdot S_{uu} & S_u \\cdot S_v + (S - P) \\cdot S_{uv} \\\\
+  S_u \\cdot S_v + (S - P) \\cdot S_{uv} & S_v \\cdot S_v + (S - P) \\cdot S_{vv}
+\\end{pmatrix}
+```
 
 Piegl & Tiller, *The NURBS Book*, 2nd ed., Section 6.1, p. 232.
+
+# Arguments
+- `surf`: spline surface
+- `P`: target point
+- `u0`, `v0`: initial guess (default: domain midpoints)
+- `tol`: convergence tolerance
+- `maxiter`: max iterations
+
+# Returns
+- ``(u, v)`` parameter pair
 """
 function point_inversion_surface(surf::AbstractSplineSurface{T}, P::AbstractVector{<:Real};
                                  u0::Real=NaN, v0::Real=NaN,
@@ -94,6 +138,13 @@ end
 
 Reverse the parameterization of a B-spline curve.
 
+Constructs ``\\bar{C}(u) = C(a + b - u)`` where ``[a, b]`` is the parameter
+domain. The new knots and control points are (Eq. 6.48):
+
+```math
+\\bar{u}_i = a + b - u_{m-i}, \\qquad \\bar{P}_i = P_{n-i}
+```
+
 Piegl & Tiller, *The NURBS Book*, 2nd ed., Section 6.5, p. 263.
 """
 function curve_reverse(crv::BSplineCurve{T}) where {T}
@@ -108,6 +159,9 @@ end
     curve_reverse(crv::NURBSCurve{T}) -> NURBSCurve{T}
 
 Reverse the parameterization of a NURBS curve.
+
+Applies the reversal formulae ``\\bar{u}_i = a + b - u_{m-i}``,
+``\\bar{P}_i = P_{n-i}``, ``\\bar{w}_i = w_{n-i}`` (Eq. 6.48).
 """
 function curve_reverse(crv::NURBSCurve{T}) where {T}
     U = crv.knots
@@ -122,6 +176,14 @@ end
     surface_reverse(surf::BSplineSurface{T}, dir::Symbol) -> BSplineSurface{T}
 
 Reverse parameterization of a B-spline surface in direction `:u` or `:v`.
+
+For reversal in the ``u``-direction (Eq. 6.49):
+
+```math
+\\bar{u}_i = a + b - u_{r-i}, \\qquad \\bar{P}_{i,j} = P_{n-i,\\,j}
+```
+
+and analogously for ``v``.
 
 Piegl & Tiller, *The NURBS Book*, 2nd ed., Section 6.5, p. 264.
 """

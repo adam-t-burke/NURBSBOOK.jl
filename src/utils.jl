@@ -7,10 +7,15 @@ const NURBS_EPSILON = 1.0e-10
 """
     binomial_coefficient(n::Int, k::Int) -> Int
 
-Compute the binomial coefficient ``\\binom{n}{k}`` using the multiplicative formula.
-Returns 0 when `k < 0` or `k > n`.
+Compute the binomial coefficient using the multiplicative formula:
 
-Used throughout derivative computations (Eq. 4.8, etc.) in
+```math
+\\binom{n}{k} = \\prod_{i=0}^{k-1} \\frac{n - i}{i + 1}
+```
+
+Returns 0 when ``k < 0`` or ``k > n``.
+
+Used throughout derivative computations (Eq. 4.8, 4.20, 5.36, etc.) in
 Piegl & Tiller, *The NURBS Book*, 2nd ed.
 """
 function binomial_coefficient(n::Int, k::Int)

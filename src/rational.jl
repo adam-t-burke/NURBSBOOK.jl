@@ -25,11 +25,26 @@ end
 """
     curve_point(crv::NURBSCurve{T}, u::Real) -> Vector{T}
 
-Compute a point on a NURBS curve at parameter `u`.
+Compute a point on a NURBS curve at parameter ``u``.
 
-Implements Algorithm A4.1 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 124.
+A NURBS curve of degree ``p`` is defined by (Eq. 4.2):
 
-Works in homogeneous coordinates and projects back to Cartesian space.
+```math
+C(u) = \\frac{\\sum_{i=0}^{n} N_{i,p}(u)\\, w_i\\, P_i}
+             {\\sum_{i=0}^{n} N_{i,p}(u)\\, w_i}
+     = \\sum_{i=0}^{n} R_{i,p}(u)\\, P_i
+```
+
+where the rational basis functions are (Eq. 4.3):
+
+```math
+R_{i,p}(u) = \\frac{N_{i,p}(u)\\, w_i}{\\sum_{j=0}^{n} N_{j,p}(u)\\, w_j}
+```
+
+This function works in homogeneous (weighted) coordinates
+``P_i^w = (w_i P_i,\\, w_i)`` and projects back to Cartesian space.
+
+Implements **Algorithm A4.1** from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 124.
 
 # Arguments
 - `crv::NURBSCurve{T}`: NURBS curve
@@ -67,10 +82,22 @@ end
 """
     curve_derivatives(crv::NURBSCurve{T}, u::Real, d::Int) -> Vector{Vector{T}}
 
-Compute derivatives of a NURBS curve up to order `d` at parameter `u`.
+Compute derivatives of a NURBS curve up to order ``d`` at parameter ``u``.
 
-Implements Algorithm A4.2 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 127,
-using Eq. 4.8 for rational projection.
+Let ``C^w(u) = \\sum N_{i,p}(u)\\, P_i^w`` denote the curve in homogeneous
+space, with components ``A(u)`` (spatial, dimension ``d``) and ``w(u)``
+(weight). The ``k``-th derivative of the rational curve is obtained via
+(Eq. 4.8):
+
+```math
+C^{(k)}(u) = \\frac{A^{(k)}(u) - \\sum_{i=1}^{k} \\binom{k}{i}\\,
+  w^{(i)}(u)\\, C^{(k-i)}(u)}{w(u)}
+```
+
+This recurrence "projects" the homogeneous derivatives to Cartesian space,
+starting from ``C^{(0)}(u) = A(u)/w(u)``.
+
+Implements **Algorithm A4.2** from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 127.
 
 # Arguments
 - `crv::NURBSCurve{T}`: NURBS curve
@@ -78,7 +105,7 @@ using Eq. 4.8 for rational projection.
 - `d::Int`: maximum derivative order
 
 # Returns
-- `Vector{Vector{T}}` of length `d + 1`
+- `Vector{Vector{T}}` of length ``d + 1``
 
 See also: [`curve_point(::NURBSCurve, ::Real)`](@ref)
 """
@@ -113,9 +140,22 @@ end
 """
     surface_point(surf::NURBSSurface{T}, u::Real, v::Real) -> Vector{T}
 
-Compute a point on a NURBS surface at parameters `(u, v)`.
+Compute a point on a NURBS surface at parameters ``(u, v)``.
 
-Implements Algorithm A4.3 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 134.
+A NURBS surface of degree ``p`` in ``u`` and ``q`` in ``v`` is defined by
+(Eq. 4.15):
+
+```math
+S(u,v) = \\frac{\\sum_{i=0}^{n} \\sum_{j=0}^{m}
+  N_{i,p}(u)\\, N_{j,q}(v)\\, w_{i,j}\\, P_{i,j}}
+  {\\sum_{i=0}^{n} \\sum_{j=0}^{m}
+  N_{i,p}(u)\\, N_{j,q}(v)\\, w_{i,j}}
+```
+
+Evaluation is performed in homogeneous coordinates and projected to
+Cartesian space.
+
+Implements **Algorithm A4.3** from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 134.
 
 # Arguments
 - `surf::NURBSSurface{T}`: NURBS surface
@@ -161,10 +201,26 @@ end
     surface_derivatives(surf::NURBSSurface{T}, u::Real, v::Real,
                         d::Int) -> Matrix{Vector{T}}
 
-Compute partial derivatives of a NURBS surface up to total order `d`.
+Compute partial derivatives of a NURBS surface up to total order ``d``.
 
-Implements Algorithm A4.4 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 137,
-using Eq. 4.20 for rational projection.
+The ``(k,l)``-th partial derivative of a rational surface is obtained by
+projecting from homogeneous coordinates via (Eq. 4.20):
+
+```math
+S^{(k,l)} = \\frac{1}{w}\\biggl[
+  A^{(k,l)}
+  - \\sum_{j=1}^{l} \\binom{l}{j}\\, w^{(0,j)}\\, S^{(k,l-j)}
+  - \\sum_{i=1}^{k} \\binom{k}{i}\\!\\left(
+      w^{(i,0)}\\, S^{(k-i,l)}
+    + \\sum_{j=1}^{l} \\binom{l}{j}\\, w^{(i,j)}\\, S^{(k-i,l-j)}
+  \\right)
+\\biggr]
+```
+
+where ``A^{(k,l)}`` and ``w^{(k,l)}`` are the spatial and weight components
+of the ``(k,l)``-th derivative of the surface in homogeneous space.
+
+Implements **Algorithm A4.4** from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 137.
 
 # Arguments
 - `surf::NURBSSurface{T}`: NURBS surface
@@ -172,7 +228,7 @@ using Eq. 4.20 for rational projection.
 - `d::Int`: maximum total derivative order
 
 # Returns
-- `Matrix{Vector{T}}` of size `(d+1) × (d+1)`
+- `Matrix{Vector{T}}` of size ``(d+1) \\times (d+1)``
 """
 function surface_derivatives(surf::NURBSSurface{T}, u::Real, v::Real,
                              d::Int) where {T}

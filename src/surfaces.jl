@@ -5,9 +5,20 @@
 """
     surface_point(surf::BSplineSurface{T}, u::Real, v::Real) -> Vector{T}
 
-Compute a point on a B-spline surface at parameters `(u, v)`.
+Compute a point on a B-spline surface at parameters ``(u, v)``.
 
-Implements Algorithm A3.5 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 103.
+A B-spline surface of degree ``p`` in ``u`` and ``q`` in ``v`` is defined
+by (Eq. 3.11):
+
+```math
+S(u,v) = \\sum_{i=0}^{n} \\sum_{j=0}^{m} N_{i,p}(u)\\, N_{j,q}(v)\\, P_{i,j}
+```
+
+where ``\\{P_{i,j}\\}`` is the ``(n+1) \\times (m+1)`` control net and
+``N_{i,p}``, ``N_{j,q}`` are B-spline basis functions on the respective
+knot vectors.
+
+Implements **Algorithm A3.5** from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 103.
 
 # Arguments
 - `surf::BSplineSurface{T}`: B-spline surface
@@ -48,9 +59,21 @@ end
     surface_derivatives(surf::BSplineSurface{T}, u::Real, v::Real,
                         d::Int) -> Matrix{Vector{T}}
 
-Compute all partial derivatives of a B-spline surface up to total order `d`.
+Compute all partial derivatives of a B-spline surface up to total order ``d``.
 
-Implements Algorithm A3.6 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 111.
+The mixed partial derivative of order ``(k, l)`` is (Eq. 3.16):
+
+```math
+\\frac{\\partial^{k+l} S}{\\partial u^k \\partial v^l}
+  = \\sum_{i=0}^{n} \\sum_{j=0}^{m}
+    N_{i,p}^{(k)}(u)\\, N_{j,q}^{(l)}(v)\\, P_{i,j}
+```
+
+where ``N_{i,p}^{(k)}`` is the ``k``-th derivative of the basis function
+with respect to ``u``. Note ``\\partial^{k+l} S / \\partial u^k \\partial v^l
+\\equiv 0`` when ``k > p`` or ``l > q``.
+
+Implements **Algorithm A3.6** from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 111.
 
 # Arguments
 - `surf::BSplineSurface{T}`: B-spline surface
@@ -58,7 +81,7 @@ Implements Algorithm A3.6 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 111
 - `d::Int`: maximum total derivative order
 
 # Returns
-- `Matrix{Vector{T}}` of size `(d+1) × (d+1)`. Entry `[k, l]` is
+- `Matrix{Vector{T}}` of size ``(d+1) \\times (d+1)``. Entry `[k, l]` is
   ``\\frac{\\partial^{k+l-2}}{\\partial u^{k-1} \\partial v^{l-1}} S(u,v)``.
 
 See also: [`surface_point`](@ref)
@@ -106,9 +129,23 @@ end
     surface_deriv_control_points(surf::BSplineSurface{T}, d::Int,
                                  r1::Int, r2::Int, s1::Int, s2::Int)
 
-Compute control points of partial derivative surfaces up to order `d`.
+Compute control points of partial derivative surfaces up to order ``d``.
 
-Implements Algorithm A3.7 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 114.
+The control points of the ``(k, l)``-th partial derivative surface are
+obtained by successive differencing (Eq. 3.17–3.19):
+
+```math
+P_{i,j}^{(k,0)} = \\frac{p - k + 1}{u_{i+p+1} - u_{i+k}}
+  \\bigl(P_{i+1,j}^{(k-1,0)} - P_{i,j}^{(k-1,0)}\\bigr)
+```
+```math
+P_{i,j}^{(k,l)} = \\frac{q - l + 1}{v_{j+q+1} - v_{j+l}}
+  \\bigl(P_{i,j+1}^{(k,l-1)} - P_{i,j}^{(k,l-1)}\\bigr)
+```
+
+starting from ``P_{i,j}^{(0,0)} = P_{i,j}``.
+
+Implements **Algorithm A3.7** from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 114.
 
 # Arguments
 - `surf::BSplineSurface{T}`: B-spline surface
@@ -117,7 +154,8 @@ Implements Algorithm A3.7 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 114
 - `s1, s2`: v-direction control point range (1-based)
 
 # Returns
-- Nested structure `PKL[k][l]` as a matrix of control point vectors.
+- Nested structure `PKL[k][l]` as a matrix of control point vectors, where
+  `PKL[k][l]` holds the ``(k-1, l-1)``-th derivative control net.
 """
 function surface_deriv_control_points(surf::BSplineSurface{T}, d::Int,
                                       r1::Int, r2::Int, s1::Int, s2::Int) where {T}

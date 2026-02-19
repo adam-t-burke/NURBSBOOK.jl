@@ -35,17 +35,30 @@ end
 """
     degree_elevate(crv::BSplineCurve{T}, t::Int=1) -> BSplineCurve{T}
 
-Elevate the degree of a B-spline curve by `t` without changing its shape.
+Elevate the degree of a B-spline curve by ``t`` without changing its shape.
 
-Implements degree elevation via Bezier decomposition, equivalent to
-Algorithm A5.9 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 206.
+The algorithm works in three steps:
+
+1. **Decompose** the B-spline into Bézier segments via knot insertion
+   (every interior knot is raised to multiplicity ``p``).
+2. **Degree-elevate** each Bézier segment using (Eq. 5.36):
+```math
+Q_i = \\sum_{j=\\max(0,\\,i-t)}^{\\min(p,\\,i)}
+  \\frac{\\binom{p}{j}\\,\\binom{t}{i-j}}{\\binom{p+t}{i}}\\, P_j
+  \\qquad i = 0, \\ldots, p+t
+```
+3. **Reassemble** the elevated Bézier segments into a single
+   ``(p+t)``-degree B-spline by removing shared endpoints.
+
+Equivalent to **Algorithm A5.9** from Piegl & Tiller, *The NURBS Book*,
+2nd ed., p. 206.
 
 # Arguments
-- `crv::BSplineCurve{T}`: input curve of degree `p`
+- `crv::BSplineCurve{T}`: input curve of degree ``p``
 - `t::Int`: degree increment (default 1)
 
 # Returns
-- `BSplineCurve{T}`: new curve of degree `p + t`
+- `BSplineCurve{T}`: new curve of degree ``p + t``
 
 See also: [`degree_reduce`](@ref)
 """
@@ -133,7 +146,11 @@ end
 """
     degree_elevate(crv::NURBSCurve{T}, t::Int=1) -> NURBSCurve{T}
 
-Elevate the degree of a NURBS curve by `t`, via homogeneous coordinates.
+Elevate the degree of a NURBS curve by ``t``.
+
+The NURBS curve is lifted to homogeneous coordinates
+``P_i^w = (w_i P_i,\\, w_i)``, B-spline degree elevation is applied
+(Eq. 5.36), and the result is projected back.
 
 See also: [`degree_elevate(::BSplineCurve, ::Int)`](@ref)
 """
@@ -150,12 +167,32 @@ end
 
 Approximate degree reduction of a B-spline curve by 1.
 
+Degree reduction seeks a curve ``\\hat{C}(u)`` of degree ``p - 1`` that
+approximates the original degree-``p`` curve ``C(u)``:
+
+```math
+\\max_{u} \\lVert C(u) - \\hat{C}(u) \\rVert \\le \\varepsilon
+```
+
+This implementation uses Greville abscissa sampling to place interior
+control points:
+
+```math
+\\bar{u}_i = \\frac{1}{p-1} \\sum_{j=i+1}^{i+p-1} u_j
+```
+
+and reports the maximum deviation ``\\varepsilon`` over a dense parameter
+sample.
+
+Based on the degree reduction framework in Piegl & Tiller, *The NURBS Book*,
+2nd ed., Section 5.6, p. 220.
+
 # Arguments
-- `crv::BSplineCurve{T}`: input curve of degree `p ≥ 2`
+- `crv::BSplineCurve{T}`: input curve of degree ``p \\ge 2``
 - `tol::Real`: tolerance for error estimate
 
 # Returns
-- `(reduced_curve, max_error)`
+- `(reduced_curve, max_error)`: the ``(p-1)``-degree curve and max deviation
 
 See also: [`degree_elevate`](@ref)
 """

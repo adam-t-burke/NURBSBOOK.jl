@@ -8,6 +8,18 @@
 
 Construct a swung surface from a profile (xz-plane) and trajectory (xy-plane).
 
+A swung surface is a generalization of a surface of revolution where the
+profile curve is scaled by the trajectory. The control points and weights
+are (Eq. 10.7):
+
+```math
+P_{i,j} = (P_i^x \\cdot T_j^x,\\; P_i^x \\cdot T_j^y,\\; P_i^z),
+\\qquad w_{i,j} = w_i^{\\text{prof}} \\cdot w_j^{\\text{traj}}
+```
+
+where ``P_i = (P_i^x, *, P_i^z)`` are profile control points and
+``T_j = (T_j^x, T_j^y, *)`` are trajectory control points.
+
 Piegl & Tiller, *The NURBS Book*, 2nd ed., Algorithm A10.1, p. 458.
 """
 function make_swung_surface(profile::NURBSCurve{T}, trajectory::NURBSCurve{T}) where {T}
@@ -36,6 +48,17 @@ end
                          q::Int=3) -> BSplineSurface{T}
 
 Construct a skinned surface through cross-section curves.
+
+Given ``K`` compatible cross-section curves ``C_k(u)``, ``k = 0, \\ldots, K-1``,
+the skinned surface interpolates them all (Eq. 10.19):
+
+```math
+S(u, v_k) = C_k(u), \\qquad k = 0, \\ldots, K - 1
+```
+
+The ``v``-direction interpolation is performed independently for each
+``u``-direction control point index via global curve interpolation.
+Cross-section curves are first made compatible (same degree and knot vector).
 
 Piegl & Tiller, *The NURBS Book*, 2nd ed., Algorithm A10.2, p. 472.
 
@@ -92,6 +115,16 @@ end
 
 Construct a swept surface by translating a cross-section along a trajectory.
 
+The swept surface is defined by (Eq. 10.26):
+
+```math
+S(u,v) = C_{\\text{section}}(u) + T(v) - T(0)
+```
+
+where ``T(v)`` is the trajectory curve. The implementation samples the
+trajectory at multiple ``v``-values, translates the cross-section to each
+position, and skins the resulting family of curves.
+
 Piegl & Tiller, *The NURBS Book*, 2nd ed., Algorithm A10.3, p. 485.
 """
 function make_swept_surface(section::BSplineCurve{T},
@@ -118,6 +151,17 @@ end
 
 Construct a Gordon surface from a curve network.
 
+Given a network of ``u``-curves and ``v``-curves that intersect at points
+``Q_{k,l}``, the Gordon surface is (Eq. 10.34):
+
+```math
+S(u,v) = S_u(u,v) + S_v(u,v) - S_{tp}(u,v)
+```
+
+where ``S_u`` is the skin through the ``u``-curves, ``S_v`` is the skin
+through the ``v``-curves, and ``S_{tp}`` is the tensor-product surface
+interpolating the intersection points.
+
 Piegl & Tiller, *The NURBS Book*, 2nd ed., Algorithm A10.4, p. 496.
 """
 function make_gordon_surface(u_curves::Vector{BSplineCurve{T}},
@@ -142,9 +186,22 @@ end
 
 Construct a Coons patch from four boundary curves.
 
+The Coons surface combines a ruled surface through the ``u``-boundaries, a
+ruled surface through the ``v``-boundaries, and a bilinear correction
+(Eq. 10.38):
+
+```math
+S(u,v) = S_u(u,v) + S_v(u,v) - S_{bl}(u,v)
+```
+
+where ``S_u`` is the ruled surface between ``c_3`` (``u=0``) and ``c_4``
+(``u=1``), ``S_v`` is the ruled surface between ``c_1`` (``v=0``) and
+``c_2`` (``v=1``), and ``S_{bl}`` is the bilinear surface through the
+four corners.
+
 Piegl & Tiller, *The NURBS Book*, 2nd ed., Section 10.6, p. 509.
 
-Boundaries: `c1` (v=0), `c2` (v=1), `c3` (u=0), `c4` (u=1).
+Boundaries: `c1` (``v=0``), `c2` (``v=1``), `c3` (``u=0``), `c4` (``u=1``).
 """
 function make_coons_surface(c1::BSplineCurve{T}, c2::BSplineCurve{T},
                             c3::BSplineCurve{T}, c4::BSplineCurve{T}) where {T}

@@ -8,7 +8,23 @@
 
 Construct a circular arc as a NURBS curve.
 
-Implements Algorithm A7.1 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 308.
+Points on the arc are:
+
+```math
+P(\\theta) = O + r\\cos\\theta\\, \\mathbf{X} + r\\sin\\theta\\, \\mathbf{Y},
+\\qquad \\theta_s \\le \\theta \\le \\theta_e
+```
+
+The arc is represented as one or more rational quadratic Bézier segments
+(degree 2 NURBS). Each segment subtends at most ``\\pi/2`` radians, with
+interior weights ``w = \\cos(\\Delta\\theta / 2)`` (Eq. 7.12). The number
+of arcs is:
+- 1 if ``\\theta_e - \\theta_s \\le \\pi/2``
+- 2 if ``\\le \\pi``
+- 3 if ``\\le 3\\pi/2``
+- 4 otherwise
+
+Implements **Algorithm A7.1** from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 308.
 
 # Arguments
 - `O`: center
@@ -18,7 +34,7 @@ Implements Algorithm A7.1 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 308
 - `the`: end angle (radians)
 
 # Returns
-- `NURBSCurve{T}`: the circular arc
+- `NURBSCurve{T}`: the circular arc (degree 2)
 """
 function make_arc(O::Vector{T}, X::Vector{T}, Y::Vector{T}, r::T,
                   ths::T, the::T) where {T}
@@ -73,7 +89,15 @@ end
 
 Construct a full circle as a NURBS curve.
 
-Convenience wrapper around [`make_arc`](@ref) spanning `[0, 2π)`.
+The circle is represented as four rational quadratic arcs, each subtending
+``\\pi/2`` radians:
+
+```math
+\\{P(\\theta) : 0 \\le \\theta < 2\\pi\\}, \\qquad
+P(\\theta) = O + r\\cos\\theta\\, \\mathbf{X} + r\\sin\\theta\\, \\mathbf{Y}
+```
+
+This is a convenience wrapper around [`make_arc`](@ref) spanning ``[0, 2\\pi)``.
 
 Piegl & Tiller, *The NURBS Book*, 2nd ed., Section 7.5, p. 308.
 """
@@ -87,14 +111,28 @@ end
 
 Construct a conic arc as a rational quadratic Bézier curve.
 
+The resulting curve is (Eq. 7.2):
+
+```math
+C(u) = \\frac{(1-u)^2 P_0 + 2u(1-u)w_1 P_1 + u^2 P_2}
+             {(1-u)^2 + 2u(1-u)w_1 + u^2}
+```
+
+where ``P_1`` is the intersection of the tangent lines at ``P_0`` and
+``P_2``, and ``w_1`` is the shoulder weight. The conic type is determined by:
+
+- ``0 < w_1 < 1``: **ellipse**
+- ``w_1 = 1``: **parabola**
+- ``w_1 > 1``: **hyperbola**
+
 Piegl & Tiller, *The NURBS Book*, 2nd ed., Section 7.3, p. 296.
 
 # Arguments
 - `P0`: start point
-- `T0`: tangent at start
+- `T0`: tangent direction at start
 - `P2`: end point
-- `T2`: tangent at end
-- `w`: shoulder weight (`0 < w < 1` ellipse, `w = 1` parabola, `w > 1` hyperbola)
+- `T2`: tangent direction at end
+- `w`: shoulder weight
 """
 function make_conic_arc(P0::Vector{T}, T0::Vector{T}, P2::Vector{T}, T2::Vector{T},
                         w::T) where {T}
@@ -114,8 +152,18 @@ end
     make_one_arc(P0::Vector{T}, T0::Vector{T}, P2::Vector{T}, T2::Vector{T},
                  P::Vector{T}) -> NURBSCurve{T}
 
-Construct a rational quadratic Bézier arc through `P0`, shoulder point `P`, and `P2`
-with prescribed tangent directions.
+Construct a rational quadratic Bézier arc through ``P_0``, shoulder point
+``P``, and ``P_2`` with prescribed tangent directions.
+
+The control point ``P_1`` is the intersection of the tangent lines from
+``P_0`` and ``P_2``. The weight ``w_1`` is computed so that the curve passes
+through the shoulder point ``P`` at ``u = 1/2`` (Eq. 7.7):
+
+```math
+C\\!\\left(\\tfrac{1}{2}\\right) =
+  \\frac{\\tfrac{1}{4} P_0 + \\tfrac{1}{2} w_1 P_1 + \\tfrac{1}{4} P_2}
+       {\\tfrac{1}{2} + \\tfrac{1}{2} w_1} = P
+```
 
 Piegl & Tiller, *The NURBS Book*, 2nd ed., Section 7.3, p. 295.
 """

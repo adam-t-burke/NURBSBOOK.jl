@@ -6,12 +6,24 @@
     global_curve_interpolation(Q::Vector{Vector{T}}, p::Int;
                                method::Symbol=:centripetal) -> BSplineCurve{T}
 
-Compute a B-spline curve of degree `p` that interpolates the data points `Q`.
+Compute a B-spline curve of degree ``p`` that interpolates the data points
+``\\{Q_k\\}_{k=0}^{n}``.
 
-Implements Algorithm A9.1 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 369.
+The interpolation conditions are (Eq. 9.1):
+
+```math
+C(\\bar{u}_k) = \\sum_{i=0}^{n} N_{i,p}(\\bar{u}_k)\\, P_i = Q_k,
+\\qquad k = 0, \\ldots, n
+```
+
+yielding an ``(n+1) \\times (n+1)`` linear system for the control points
+``P_i``. Parameters ``\\bar{u}_k`` are computed via chord-length or
+centripetal method, and the knot vector is built by averaging (Eq. 9.8).
+
+Implements **Algorithm A9.1** from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 369.
 
 # Arguments
-- `Q::Vector{Vector{T}}`: data points (at least `p + 1`)
+- `Q::Vector{Vector{T}}`: data points (at least ``p + 1``)
 - `p::Int`: desired degree
 - `method::Symbol`: `:chord` or `:centripetal` parameterization
 
@@ -58,6 +70,22 @@ end
 
 Compute parameter values using chord-length or centripetal parameterization.
 
+**Chord-length** (Eq. 9.4):
+
+```math
+\\bar{u}_k = \\bar{u}_{k-1} + \\frac{\\lVert Q_k - Q_{k-1} \\rVert}{d},
+\\quad d = \\sum_{k=1}^{n} \\lVert Q_k - Q_{k-1} \\rVert
+```
+
+**Centripetal** (Eq. 9.5):
+
+```math
+\\bar{u}_k = \\bar{u}_{k-1} + \\frac{\\sqrt{\\lVert Q_k - Q_{k-1} \\rVert}}{d},
+\\quad d = \\sum_{k=1}^{n} \\sqrt{\\lVert Q_k - Q_{k-1} \\rVert}
+```
+
+with ``\\bar{u}_0 = 0`` and ``\\bar{u}_n = 1``.
+
 Piegl & Tiller, *The NURBS Book*, 2nd ed., Eq. 9.4–9.5, p. 365.
 """
 function _compute_parameters(Q::Vector{Vector{T}}, method::Symbol) where {T}
@@ -87,6 +115,15 @@ end
 
 Averaging-based knot vector for global interpolation.
 
+Interior knots are computed by averaging parameter values (Eq. 9.8):
+
+```math
+u_{j+p} = \\frac{1}{p} \\sum_{i=j}^{j+p-1} \\bar{u}_i,
+\\qquad j = 1, \\ldots, n - p
+```
+
+with ``u_0 = \\cdots = u_p = 0`` and ``u_{n+1} = \\cdots = u_{n+p+1} = 1``.
+
 Piegl & Tiller, *The NURBS Book*, 2nd ed., Eq. 9.8, p. 369.
 """
 function _compute_knot_vector(u_bar::Vector{T}, p::Int, npts::Int) where {T}
@@ -113,12 +150,24 @@ end
 
 Least-squares B-spline curve approximation with `nctl` control points.
 
-Implements Algorithm A9.7 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 410.
+Given ``m + 1`` data points and ``n + 1 < m + 1`` desired control points,
+the method minimizes (Eq. 9.25):
+
+```math
+\\sum_{k=1}^{m-1} \\left\\lVert Q_k - \\sum_{i=0}^{n} N_{i,p}(\\bar{u}_k)\\, P_i
+\\right\\rVert^2
+```
+
+subject to the endpoint constraints ``C(0) = Q_0`` and ``C(1) = Q_m``.
+This yields a normal equation system ``(N^T N)\\, P = N^T R`` for the
+``n - 1`` interior control points.
+
+Implements **Algorithm A9.7** from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 410.
 
 # Arguments
-- `Q::Vector{Vector{T}}`: data points
+- `Q::Vector{Vector{T}}`: data points (``m + 1`` points)
 - `p::Int`: degree
-- `nctl::Int`: number of control points
+- `nctl::Int`: number of control points (``n + 1``)
 - `method::Symbol`: parameterization method
 
 # Returns
@@ -191,12 +240,23 @@ end
     global_surface_interpolation(Q::Matrix{Vector{T}}, p::Int, q::Int;
                                  method::Symbol=:centripetal) -> BSplineSurface{T}
 
-Interpolate a grid of points `Q[i, j]` with a B-spline surface.
+Interpolate a grid of points ``Q_{k,l}`` with a B-spline surface.
 
-Implements Algorithm A9.4 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 376.
+The interpolation conditions are (Eq. 9.30):
+
+```math
+S(\\bar{u}_k, \\bar{v}_l) = \\sum_{i=0}^{n} \\sum_{j=0}^{m}
+  N_{i,p}(\\bar{u}_k)\\, N_{j,q}(\\bar{v}_l)\\, P_{i,j} = Q_{k,l}
+```
+
+This is solved by a two-pass approach: first interpolating along columns
+(``u``-direction) and then along rows (``v``-direction) on the resulting
+intermediate control points.
+
+Implements **Algorithm A9.4** from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 376.
 
 # Arguments
-- `Q::Matrix{Vector{T}}`: `nu × nv` grid of data points
+- `Q::Matrix{Vector{T}}`: ``n_u \\times n_v`` grid of data points
 - `p::Int`: u-degree
 - `q::Int`: v-degree
 - `method::Symbol`: parameterization method
@@ -232,11 +292,25 @@ end
 """
     local_curve_interpolation(Q::Vector{Vector{T}}) -> BSplineCurve{T}
 
-Cubic local interpolation through data points `Q`.
+Cubic local interpolation through data points ``\\{Q_k\\}``.
 
-Implements Algorithm A9.3 from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 394.
-Constructs a cubic B-spline that passes through all given points using
-local tangent estimation.
+Unlike global interpolation, this method builds each cubic segment
+independently using local tangent estimates. At each interior data point,
+the tangent is estimated as a weighted average of the adjacent chord
+directions:
+
+```math
+T_k = \\frac{\\Delta u_{k+1}}{\\Delta u_k + \\Delta u_{k+1}}
+      \\frac{Q_k - Q_{k-1}}{\\lVert Q_k - Q_{k-1}\\rVert}
+    + \\frac{\\Delta u_k}{\\Delta u_k + \\Delta u_{k+1}}
+      \\frac{Q_{k+1} - Q_k}{\\lVert Q_{k+1} - Q_k\\rVert}
+```
+
+Each segment is a cubic Hermite-like Bézier with four control points
+``Q_k``, ``Q_k + \\frac{\\Delta u}{3} T_k``,
+``Q_{k+1} - \\frac{\\Delta u}{3} T_{k+1}``, ``Q_{k+1}``.
+
+Implements **Algorithm A9.3** from Piegl & Tiller, *The NURBS Book*, 2nd ed., p. 394.
 
 # Arguments
 - `Q::Vector{Vector{T}}`: data points (at least 3)
