@@ -7,6 +7,8 @@
 A comprehensive Julia implementation of Non-Uniform Rational B-Splines (NURBS) based on
 *The NURBS Book* by Les Piegl and Wayne Tiller (Springer, 2nd Edition, 1997).
 
+This is a machine translation using Claude-Opus 4.6. Errors may be present.
+
 ## Features
 
 - **Complete coverage** of algorithms A2.1 through A10.4 from *The NURBS Book*
