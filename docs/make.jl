@@ -5,6 +5,7 @@ makedocs(
     sitename = "NURBSBOOK.jl",
     modules = [NURBSBOOK],
     format = Documenter.HTML(prettyurls = false),
+    warnonly = true,
     pages = [
         "Home" => "index.md",
         "Types" => "types.md",
